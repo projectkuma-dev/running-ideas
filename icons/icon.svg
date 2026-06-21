@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#0b5cff"/>
+  <!-- lightbulb / idea mark -->
+  <path fill="#ffffff" d="M256 96c-79 0-143 64-143 143 0 52 28 97 70 122v40c0 18 15 33 33 33h80c18 0 33-15 33-33v-40c42-25 70-70 70-122 0-79-64-143-143-143zm40 308c0 4-4 8-8 8h-64c-4 0-8-4-8-8v-12h80v12zm-16-44h-48v-28a16 16 0 0 0-32 0v28h-8c-30-20-49-53-49-101 0-61 50-111 111-111s111 50 111 111c0 48-19 81-49 101h-8v-28a16 16 0 0 0-32 0v28z"/>
+  <!-- motion lines -->
+  <rect x="60" y="232" width="44" height="22" rx="11" fill="#9fc0ff"/>
+  <rect x="40" y="282" width="64" height="22" rx="11" fill="#9fc0ff"/>
+</svg>

@@ -1,0 +1,8 @@
+# Minimal Supabase project config for the Edge Function.
+# `project_id` is set by `supabase link`; the value below is a placeholder.
+project_id = "running-ideas"
+
+[functions.send-email]
+# The function authenticates callers with the anon key (verify_jwt = true means
+# a valid Supabase JWT/anon key is required in the Authorization header).
+verify_jwt = true

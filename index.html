@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b5cff" />
+  <meta name="description" content="Capture running ideas one-handed and email them after your run." />
+
+  <title>Running Ideas</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- ============ CAPTURE SCREEN ============ -->
+  <section id="capture-screen" class="screen" data-active>
+    <header class="app-header">
+      <h1 class="app-title">Running Ideas</h1>
+      <span id="idea-count" class="idea-count" aria-live="polite">0</span>
+    </header>
+
+    <main class="idea-list-wrap">
+      <ul id="idea-list" class="idea-list" aria-label="Captured ideas"></ul>
+      <p id="empty-state" class="empty-state">No ideas yet. Tap the field and go.</p>
+    </main>
+
+    <footer class="capture-bar">
+      <label class="sr-only" for="idea-input">New idea</label>
+      <textarea
+        id="idea-input"
+        class="idea-input"
+        rows="1"
+        inputmode="text"
+        autocomplete="off"
+        autocapitalize="sentences"
+        placeholder="What's the idea?"
+        enterkeyhint="done"></textarea>
+
+      <button id="add-btn" class="btn btn-primary btn-add" type="button">
+        Add Idea
+      </button>
+
+      <button id="goto-send-btn" class="btn btn-ghost btn-send-link" type="button">
+        Review &amp; Send →
+      </button>
+    </footer>
+  </section>
+
+  <!-- ============ SEND SCREEN ============ -->
+  <section id="send-screen" class="screen" hidden>
+    <header class="app-header">
+      <button id="back-btn" class="btn btn-icon" type="button" aria-label="Back to capture">←</button>
+      <h1 class="app-title">Send Ideas</h1>
+    </header>
+
+    <main class="send-body">
+      <div class="field">
+        <label class="field-label" for="recipient-select">Send to</label>
+        <select id="recipient-select" class="recipient-select"></select>
+      </div>
+
+      <div class="send-summary">
+        <span id="send-count" class="send-count">0 ideas</span>
+        <span class="send-summary-hint">will be compiled into one email.</span>
+      </div>
+
+      <ul id="send-preview" class="send-preview" aria-label="Ideas to send"></ul>
+    </main>
+
+    <footer class="send-bar">
+      <button id="send-btn" class="btn btn-primary btn-add" type="button">
+        Send to Email
+      </button>
+    </footer>
+  </section>
+
+  <!-- ============ SUCCESS OVERLAY ============ -->
+  <div id="success-overlay" class="overlay" hidden>
+    <div class="success-card" role="dialog" aria-labelledby="success-title" aria-modal="true">
+      <div class="success-check" aria-hidden="true">✓</div>
+      <h2 id="success-title" class="success-title">Sent!</h2>
+      <p id="success-msg" class="success-msg"></p>
+      <button id="new-session-btn" class="btn btn-primary btn-add" type="button">
+        Start new session
+      </button>
+      <button id="keep-btn" class="btn btn-ghost" type="button">
+        Keep these ideas
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ TOAST ============ -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
