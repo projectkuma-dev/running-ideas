@@ -10,10 +10,10 @@
  */
 export const CONFIG = {
   // Deployed Edge Function URL, e.g. https://abcd1234.supabase.co/functions/v1/send-email
-  edgeFunctionUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/send-email',
+  edgeFunctionUrl: 'https://kkqtywoxtebfrnsfbjgq.supabase.co/functions/v1/send-email',
 
   // Supabase anon/public key (safe to expose).
-  supabaseAnonKey: 'YOUR_SUPABASE_ANON_KEY',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrcXR5d294dGViZnJuc2ZiamdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMzgwMzcsImV4cCI6MjA5NzYxNDAzN30.pN3qjQsVaHgi3d6TPlwCFJ3qQlk6glYz4YxmujE-b9I',
 
   // Recipient options shown in the dropdown. Keys must match the Edge Function.
   recipients: [
