@@ -11,7 +11,7 @@
  */
 import { CONFIG } from './config.js';
 import {
-  loadIdeas, updateIdea, setAllRoutes, removeIdeas, getDefaultRoute,
+  loadIdeas, updateIdea, setAllRoutes, removeIdeas, getDefaultRoute, archiveSent,
 } from './storage.js';
 import { sendIdeas } from './api.js';
 import { toast, formatTime, escapeHtml } from './ui.js';
@@ -188,8 +188,9 @@ export function initSend({ onAfterSend } = {}) {
           ideas: group.map(({ text, ts }) => ({ text, ts })),
         });
 
-        // Remove as soon as this group is confirmed sent — a later failure
-        // must not resend it.
+        // Archive then remove as soon as this group is confirmed sent — a
+        // later failure must not resend it.
+        archiveSent(group, key);
         removeIdeas(group.map((i) => i.id));
         sentParts.push(`${group.length} idea${group.length === 1 ? '' : 's'} to ${labelFor(key)}`);
       }

@@ -18,6 +18,7 @@
   <section id="capture-screen" class="screen" data-active>
     <header class="app-header">
       <h1 class="app-title">Running Ideas</h1>
+      <button id="goto-history-btn" class="btn btn-icon" type="button" aria-label="Sent history">🕘</button>
       <span id="idea-count" class="idea-count" aria-live="polite">0</span>
     </header>
 
@@ -72,6 +73,30 @@
         Send to Email
       </button>
     </footer>
+  </section>
+
+  <!-- ============ HISTORY SCREEN ============ -->
+  <section id="history-screen" class="screen" hidden>
+    <header class="app-header">
+      <button id="history-back-btn" class="btn btn-icon" type="button" aria-label="Back to capture">←</button>
+      <h1 class="app-title">History</h1>
+    </header>
+
+    <div class="history-search-wrap">
+      <label class="sr-only" for="history-search">Search sent ideas</label>
+      <input
+        id="history-search"
+        class="history-search"
+        type="search"
+        inputmode="search"
+        autocomplete="off"
+        placeholder="Search sent ideas…" />
+    </div>
+
+    <main class="idea-list-wrap">
+      <ul id="history-list" class="idea-list" aria-label="Sent ideas"></ul>
+      <p id="history-empty" class="empty-state">Nothing sent yet. Ideas land here after you send them.</p>
+    </main>
   </section>
 
   <!-- ============ SUCCESS OVERLAY ============ -->

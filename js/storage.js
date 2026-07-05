@@ -18,6 +18,8 @@
 const SESSION_KEY = 'running-ideas:session:v1';
 const DRAFT_KEY = 'running-ideas:draft:v1';
 const DEFAULT_ROUTE_KEY = 'running-ideas:default-route:v1';
+const HISTORY_KEY = 'running-ideas:history:v1';
+const HISTORY_MAX = 500; // cap so localStorage never grows unbounded
 
 /** @returns {Array<{id:string,text:string,ts:number,route?:string}>} */
 export function loadIdeas() {
@@ -139,6 +141,41 @@ export function loadDraft() {
 
 export function clearDraft() {
   saveDraft('');
+}
+
+/* ---------- Sent-history archive (local, device-only) ----------
+ * The durable server copy lives in the ideas_history table (written by the
+ * Edge Function). This local copy powers the in-app History view: instant,
+ * private, and available offline. Entry: { id, text, ts, recipient, sentAt }.
+ */
+
+/** @returns {Array<{id:string,text:string,ts:number,recipient:string,sentAt:number}>} */
+export function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Append a just-sent group to the archive, trimming to the newest HISTORY_MAX. */
+export function archiveSent(ideas, recipient) {
+  const sentAt = Date.now();
+  const entries = ideas.map(({ id, text, ts }) => ({ id, text, ts, recipient, sentAt }));
+  const history = loadHistory().concat(entries).slice(-HISTORY_MAX);
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  } catch (err) {
+    console.error('Failed to archive sent ideas:', err);
+  }
+}
+
+export function clearHistory() {
+  try {
+    localStorage.removeItem(HISTORY_KEY);
+  } catch { /* non-fatal */ }
 }
 
 function makeId() {

@@ -381,6 +381,44 @@ body {
   cursor: pointer;
 }
 
+/* ---------- History screen ---------- */
+.history-search-wrap {
+  padding: 12px var(--pad) 4px;
+}
+.history-search {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  font-size: 1.05rem;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  -webkit-appearance: none;
+}
+.history-search:focus { border-color: var(--accent); }
+
+.history-day {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  padding: 10px 2px 0;
+}
+.history-chip {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+.history-chip-work { background: var(--accent); color: #fff; }
+.history-chip-personal { background: var(--ok); color: #fff; }
+
 /* ---------- Success overlay ---------- */
 .overlay {
   position: fixed;

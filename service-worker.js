@@ -7,7 +7,7 @@
  *
  * Bump CACHE_VERSION whenever shell files change to force an update.
  */
-const CACHE_VERSION = 'running-ideas-v2';
+const CACHE_VERSION = 'running-ideas-v3';
 
 const SHELL = [
   './',
@@ -17,6 +17,7 @@ const SHELL = [
   './js/app.js',
   './js/capture.js',
   './js/send.js',
+  './js/history.js',
   './js/storage.js',
   './js/api.js',
   './js/ui.js',

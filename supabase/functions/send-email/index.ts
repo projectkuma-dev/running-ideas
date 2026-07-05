@@ -42,6 +42,52 @@ function resolveRecipient(key: string): string | null {
   return map[key] ?? null;
 }
 
+/**
+ * Archive sent ideas to the ideas_history table via PostgREST using the
+ * service role (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are auto-injected
+ * into Edge Functions). RLS denies the anon key, so history stays private.
+ *
+ * Best-effort: the email already went out, so a failed insert is logged,
+ * not surfaced as an error to the client.
+ */
+async function archiveIdeas(recipient: string, ideas: Idea[]): Promise<boolean> {
+  const url = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !serviceKey) {
+    console.error('archive skipped: missing SUPABASE_URL / service role key');
+    return false;
+  }
+
+  const batchId = crypto.randomUUID();
+  const rows = ideas.map((i) => ({
+    batch_id: batchId,
+    recipient,
+    text: i.text,
+    captured_at: new Date(i.ts).toISOString(),
+  }));
+
+  try {
+    const res = await fetch(`${url}/rest/v1/ideas_history`, {
+      method: 'POST',
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(rows),
+    });
+    if (!res.ok) {
+      console.error('archive insert failed:', res.status, await res.text());
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('archive insert threw:', err);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -86,7 +132,8 @@ Deno.serve(async (req) => {
       html,
     });
 
-    return json({ ok: true, sent: ideas.length });
+    const archived = await archiveIdeas(recipient, ideas);
+    return json({ ok: true, sent: ideas.length, archived });
   } catch (err) {
     console.error('sendMail failed:', err);
     return json({ error: 'Failed to send email' }, 502);
