@@ -1,90 +1,217 @@
 /**
- * Send screen controller.
+ * Triage / send screen controller.
  *
- * Lets the user pick a recipient, previews the session, and posts to the backend.
- * On success it offers to clear the session and returns to capture.
+ * Post-run "clarify" step: each idea gets routed (Work / Personal / Trash),
+ * text can be edited in place, then one email is sent per non-empty group.
+ *
+ * The Edge Function contract is unchanged ({ recipient, ideas }) — routing is
+ * purely a frontend concern: one call per group. Ideas are removed from the
+ * session as each group sends successfully, so a partial failure (flaky
+ * signal) never double-sends; retrying only sends what's left.
  */
 import { CONFIG } from './config.js';
-import { loadIdeas, clearSession } from './storage.js';
+import {
+  loadIdeas, updateIdea, setAllRoutes, removeIdeas, getDefaultRoute,
+} from './storage.js';
 import { sendIdeas } from './api.js';
 import { toast, formatTime, escapeHtml } from './ui.js';
 
-export function initSend({ onAfterSend } = {}) {
-  const select = document.getElementById('recipient-select');
-  const sendBtn = document.getElementById('send-btn');
-  const countEl = document.getElementById('send-count');
-  const preview = document.getElementById('send-preview');
+const ROUTES = ['work', 'personal', 'trash'];
 
+export function initSend({ onAfterSend } = {}) {
+  const list = document.getElementById('triage-list');
+  const sendBtn = document.getElementById('send-btn');
   const overlay = document.getElementById('success-overlay');
   const successMsg = document.getElementById('success-msg');
-  const newSessionBtn = document.getElementById('new-session-btn');
-  const keepBtn = document.getElementById('keep-btn');
+  const doneBtn = document.getElementById('done-btn');
 
-  // Populate recipient dropdown from config (labels only — no addresses).
-  select.innerHTML = CONFIG.recipients
-    .map((r) => `<option value="${escapeHtml(r.key)}">${escapeHtml(r.label)}</option>`)
-    .join('');
+  let editingId = null;
 
-  function showSuccess(count, label) {
-    successMsg.textContent =
-      `${count} idea${count === 1 ? '' : 's'} emailed to ${label}.`;
-    overlay.hidden = false;
+  function labelFor(key) {
+    return CONFIG.recipients.find((r) => r.key === key)?.label || key;
   }
 
-  function finish({ clear }) {
-    if (clear) clearSession();
-    overlay.hidden = true;
-    render();
-    onAfterSend?.();
+  /** Route with the session default applied to unrouted ideas. */
+  function routeOf(idea) {
+    return ROUTES.includes(idea.route) ? idea.route : getDefaultRoute();
   }
 
-  newSessionBtn.addEventListener('click', () => finish({ clear: true }));
-  keepBtn.addEventListener('click', () => finish({ clear: false }));
+  function groups() {
+    const byRoute = { work: [], personal: [], trash: [] };
+    for (const idea of loadIdeas()) byRoute[routeOf(idea)].push(idea);
+    return byRoute;
+  }
 
   function render() {
     const ideas = loadIdeas();
-    countEl.textContent = `${ideas.length} idea${ideas.length === 1 ? '' : 's'}`;
-    sendBtn.disabled = ideas.length === 0;
 
-    preview.innerHTML = ideas
-      .map(
-        (idea) => `
-        <li>
-          <span class="pv-time">${formatTime(idea.ts)}</span>
-          ${escapeHtml(idea.text)}
-        </li>`
-      )
+    list.innerHTML = ideas
+      .map((idea) => {
+        const route = routeOf(idea);
+        const isEditing = idea.id === editingId;
+        const textHtml = isEditing
+          ? `<textarea class="triage-edit" rows="2" aria-label="Edit idea">${escapeHtml(idea.text)}</textarea>`
+          : `<div class="triage-text" role="button" tabindex="0" aria-label="Edit idea">${escapeHtml(idea.text)}</div>`;
+
+        return `
+        <li class="triage-item${route === 'trash' ? ' is-trash' : ''}" data-id="${idea.id}">
+          ${textHtml}
+          <span class="triage-time">${formatTime(idea.ts)}</span>
+          <div class="seg" role="group" aria-label="Route idea">
+            <button class="seg-btn${route === 'work' ? ' active' : ''}" type="button" data-route="work">Work</button>
+            <button class="seg-btn${route === 'personal' ? ' active' : ''}" type="button" data-route="personal">Personal</button>
+            <button class="seg-btn${route === 'trash' ? ' active' : ''}" type="button" data-route="trash" aria-label="Trash idea">🗑</button>
+          </div>
+        </li>`;
+      })
       .join('');
+
+    if (editingId) {
+      const ta = list.querySelector('.triage-edit');
+      if (ta) {
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+      }
+    }
+
+    updateSendButton();
   }
 
-  async function send() {
-    const ideas = loadIdeas();
-    if (ideas.length === 0) return;
+  function updateSendButton() {
+    const { work, personal, trash } = groups();
+    const parts = [];
+    if (work.length) parts.push(`${work.length} to ${labelFor('work')}`);
+    if (personal.length) parts.push(`${personal.length} to ${labelFor('personal')}`);
 
-    const recipient = select.value;
-    const label = CONFIG.recipients.find((r) => r.key === recipient)?.label || recipient;
+    if (parts.length) {
+      sendBtn.textContent = `Send ${parts.join(' · ')}`;
+      sendBtn.disabled = false;
+    } else if (trash.length) {
+      sendBtn.textContent = `Discard ${trash.length} idea${trash.length === 1 ? '' : 's'}`;
+      sendBtn.disabled = false;
+    } else {
+      sendBtn.textContent = 'Nothing to send';
+      sendBtn.disabled = true;
+    }
+  }
+
+  /* ---------- editing ---------- */
+
+  function startEdit(id) {
+    editingId = id;
+    render();
+  }
+
+  function commitEdit(ta) {
+    const id = editingId;
+    editingId = null;
+    const text = ta.value.trim();
+    if (id && text) updateIdea(id, { text });
+    render();
+  }
+
+  /* ---------- events ---------- */
+
+  list.addEventListener('click', (e) => {
+    const item = e.target.closest('.triage-item');
+    if (!item) return;
+    const id = item.dataset.id;
+
+    const segBtn = e.target.closest('.seg-btn');
+    if (segBtn) {
+      updateIdea(id, { route: segBtn.dataset.route });
+      render();
+      return;
+    }
+
+    if (e.target.closest('.triage-text')) startEdit(id);
+  });
+
+  list.addEventListener('keydown', (e) => {
+    if (e.target.classList.contains('triage-text') && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      startEdit(e.target.closest('.triage-item')?.dataset.id);
+      return;
+    }
+    if (e.target.classList.contains('triage-edit')) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        commitEdit(e.target);
+      } else if (e.key === 'Escape') {
+        editingId = null;
+        render();
+      }
+    }
+  });
+
+  // Save the edit when focus leaves the textarea.
+  list.addEventListener('focusout', (e) => {
+    if (e.target.classList?.contains('triage-edit') && editingId) commitEdit(e.target);
+  });
+
+  for (const btn of document.querySelectorAll('.btn-bulk')) {
+    btn.addEventListener('click', () => {
+      setAllRoutes(btn.dataset.bulk);
+      render();
+    });
+  }
+
+  /* ---------- sending ---------- */
+
+  async function send() {
+    const { work, personal, trash } = groups();
+    const toSend = { work, personal };
+    const sendable = work.length + personal.length;
+
+    // Nothing routed to an email — the button is in "Discard" mode.
+    if (sendable === 0) {
+      if (trash.length) {
+        removeIdeas(trash.map((i) => i.id));
+        toast('Discarded', 'info');
+        render();
+        onAfterSend?.();
+      }
+      return;
+    }
 
     sendBtn.disabled = true;
-    const original = sendBtn.textContent;
     sendBtn.textContent = 'Sending…';
 
+    const sentParts = [];
     try {
-      await sendIdeas({
-        recipient,
-        ideas: ideas.map(({ text, ts }) => ({ text, ts })),
-      });
+      for (const key of ['work', 'personal']) {
+        const group = toSend[key];
+        if (!group.length) continue;
 
-      // Success screen lets the user clear or keep — no jarring native dialog.
-      showSuccess(ideas.length, label);
+        await sendIdeas({
+          recipient: key,
+          ideas: group.map(({ text, ts }) => ({ text, ts })),
+        });
+
+        // Remove as soon as this group is confirmed sent — a later failure
+        // must not resend it.
+        removeIdeas(group.map((i) => i.id));
+        sentParts.push(`${group.length} idea${group.length === 1 ? '' : 's'} to ${labelFor(key)}`);
+      }
+
+      removeIdeas(trash.map((i) => i.id));
+      successMsg.textContent = `Emailed ${sentParts.join(' · ')}.`;
+      overlay.hidden = false;
     } catch (err) {
-      toast(err.message || 'Send failed', 'error');
+      const done = sentParts.length ? `${sentParts.join(' · ')} sent — ` : '';
+      toast(`${done}${err.message || 'Send failed'}`, 'error');
     } finally {
-      sendBtn.textContent = original;
-      sendBtn.disabled = loadIdeas().length === 0;
+      render();
     }
   }
 
   sendBtn.addEventListener('click', send);
+
+  doneBtn.addEventListener('click', () => {
+    overlay.hidden = true;
+    render();
+    onAfterSend?.();
+  });
 
   return { render };
 }

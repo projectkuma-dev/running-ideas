@@ -6,6 +6,23 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--yes", "serve", ".", "-l", "4179"],
       "port": 4179
+    },
+    {
+      "name": "slo-skate",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "serve", "C:\\Users\\bradk\\OneDrive\\Documents\\Claude\\Projects\\slo-board", "-l", "4321"],
+      "port": 4321
+    },
+    {
+      "name": "finance-projector",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "C:\\Users\\bradk\\OneDrive\\Documents\\Claude\\Projects\\finance-app"
+      ],
+      "port": 5173
     }
   ]
 }

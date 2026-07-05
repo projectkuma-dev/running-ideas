@@ -1,7 +1,8 @@
 # Running Ideas
 
-A dead-simple PWA for capturing quick ideas one-handed while running, then emailing
-the whole session to yourself (Work or Personal) afterward.
+A dead-simple PWA for capturing quick ideas one-handed while running. Afterward, a
+triage screen routes each idea to Work, Personal, or the trash — one clean email is
+sent per destination.
 
 - **Frontend:** vanilla HTML/CSS/JS as an installable PWA, hosted on GitHub Pages.
 - **Backend:** a Supabase Edge Function that sends email via Gmail + Nodemailer, with
@@ -19,8 +20,8 @@ running-ideas/
 │   └── styles.css          # Mobile-first, high-contrast, large tap targets
 ├── js/
 │   ├── app.js              # Entry point: screen routing + SW registration
-│   ├── capture.js          # Capture screen controller
-│   ├── send.js             # Send screen controller
+│   ├── capture.js          # Capture screen (draft autosave, undo delete)
+│   ├── send.js             # Triage screen (per-idea routing, edit in place)
 │   ├── storage.js          # Session persistence (localStorage) — data source of truth
 │   ├── api.js              # Backend client (the one place that calls fetch)
 │   ├── config.js           # Edge Function URL, anon key, recipient labels
@@ -59,21 +60,15 @@ locally. It validates the request and logs the composed email instead of sending
 node scripts/mock-server.mjs        # listens on http://localhost:4180
 ```
 
-Then point `js/config.js` at it temporarily:
+`js/config.js` auto-detects localhost and points at the mock — no config editing
+needed. Send a session from the UI and watch the composed subject/body print in the
+mock's console. Sending to a recipient keyed `fail` makes the mock return a 502 so
+you can verify error handling.
 
-```js
-edgeFunctionUrl: 'http://localhost:4180/',
-supabaseAnonKey: 'test-anon-key',
-```
-
-Send a session from the UI and watch the composed subject/body print in the mock's
-console. Use the `Personal`/`Work` recipients normally; sending to a recipient keyed
-`fail` makes the mock return a 502 so you can verify error handling. Revert
-`config.js` before deploying.
-
-> Note: the service worker caches `js/config.js`. After editing config during local
-> testing, do a hard reload (or unregister the SW in DevTools → Application) so the
-> change is picked up.
+> Note: the service worker caches the app shell. After editing shell files during
+> local testing, do a hard reload (or unregister the SW in DevTools → Application)
+> so changes are picked up. Deploys should bump `CACHE_VERSION` in
+> `service-worker.js`.
 
 ### Tests
 

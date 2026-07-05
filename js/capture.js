@@ -3,8 +3,15 @@
  *
  * Owns the idea input, the "Add Idea" action, and the live list rendering.
  * Reads/writes ideas only through storage.js.
+ *
+ * Mid-run affordances:
+ *  - Draft autosave: a half-typed idea survives screen lock or reload.
+ *  - Undo delete: a mis-tap on Delete is reversible for 5 seconds, no confirm.
  */
-import { addIdea, deleteIdea, loadIdeas } from './storage.js';
+import {
+  addIdea, deleteIdea, restoreIdea, loadIdeas,
+  saveDraft, loadDraft, clearDraft,
+} from './storage.js';
 import { toast, formatTime, escapeHtml } from './ui.js';
 
 export function initCapture({ onChange } = {}) {
@@ -50,9 +57,12 @@ export function initCapture({ onChange } = {}) {
       return;
     }
     input.value = '';
+    clearDraft();
     autoGrow();
     render();
     notify();
+    // Confirm the capture without requiring eyes on screen.
+    navigator.vibrate?.(40);
     // Keep the keyboard up for rapid-fire capture.
     input.focus();
   }
@@ -60,7 +70,10 @@ export function initCapture({ onChange } = {}) {
   // --- events ---
   addBtn.addEventListener('click', commit);
 
-  input.addEventListener('input', autoGrow);
+  input.addEventListener('input', () => {
+    autoGrow();
+    saveDraft(input.value);
+  });
 
   // Enter commits; Shift+Enter inserts a newline.
   input.addEventListener('keydown', (e) => {
@@ -70,18 +83,35 @@ export function initCapture({ onChange } = {}) {
     }
   });
 
-  // Delegate delete taps.
+  // Delegate delete taps: delete immediately, offer Undo — no confirm dialog.
   list.addEventListener('click', (e) => {
     const btn = e.target.closest('.idea-delete');
     if (!btn) return;
     const li = btn.closest('.idea-item');
     const id = li?.dataset.id;
     if (!id) return;
-    deleteIdea(id);
+
+    const removed = deleteIdea(id);
     render();
     notify();
-    toast('Deleted');
+    if (removed) {
+      toast('Deleted', 'info', {
+        actionLabel: 'Undo',
+        onAction: () => {
+          restoreIdea(removed.idea, removed.index);
+          render();
+          notify();
+        },
+      });
+    }
   });
+
+  // Restore any half-typed idea from a previous visit.
+  const draft = loadDraft();
+  if (draft) {
+    input.value = draft;
+    autoGrow();
+  }
 
   render();
   return { render };

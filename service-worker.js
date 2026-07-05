@@ -7,7 +7,7 @@
  *
  * Bump CACHE_VERSION whenever shell files change to force an update.
  */
-const CACHE_VERSION = 'running-ideas-v1';
+const CACHE_VERSION = 'running-ideas-v2';
 
 const SHELL = [
   './',
